@@ -1,0 +1,8 @@
+nerf_torch/
+.env
+.vscode/
+**/__pycache__/
+data/
+.pytest_cache/
+build/
+dist/
