@@ -1,3 +1,35 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"] 
+
+[project]
+name = "jax-nerf"
+version = "1.0.0"
+description = "Jax implementation of neural radiance fields"
+readme = "README.md"
+authors = [{ name = "Pengfei Zhao", email = "p.zhao.9000@gmail.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+]
+keywords = ["jax", "nerf"]
+
+dependencies = [
+    "jax>=0.3.25",
+    "jaxlib>=0.3.25",
+    "flax>=0.6.3",
+    "optax>=0.1.4",
+    "Pillow>=9.4.0",
+    "numpy>=1.23.5",
+    'tomli; python_version < "3.11"',
+]
+requires-python = ">=3.10.8"
+
+[project.optional-dependencies]
+dev = ["black", "isort", "pip-tools", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/pzdkn/jax-nerf"
