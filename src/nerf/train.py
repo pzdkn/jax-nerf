@@ -16,7 +16,7 @@ from nerf.rendering import render_volume_density
 from nerf.dataloading import load_image_data
 
 class TrainState(train_state.TrainState):
-    rngs: rd.KeyArray
+    rngs: rd.KeyArray = None
 
 def create_train_state(module: flax.linen.Module,
                        lr: float, 
