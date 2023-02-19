@@ -8,7 +8,7 @@ include = ["nerf*"]
 
 [project]
 name = "jax-nerf"
-version = "1.0.2"
+version = "1.0.3"
 description = "Jax implementation of neural radiance fields"
 readme = "README.md"
 authors = [{ name = "Pengfei Zhao", email = "p.zhao.9000@gmail.com" }]
@@ -23,8 +23,8 @@ dependencies = [
     "flax>=0.6.3",
     "optax>=0.1.4",
     "Pillow>=9.4.0",
-    "numpy>=1.23.5",
     'tomli; python_version < "3.11"',
+    "numpy==1.23.5"
 ]
 requires-python = ">=3.8.10"
 
