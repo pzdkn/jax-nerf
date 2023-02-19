@@ -189,6 +189,10 @@ def main():
                                          focal,
                                          model,
                                          batch_size=args.batch_size,
+                                         near_thres=args.near_far_bounds[0],
+                                         far_thres=args.near_far_bounds[1],
+                                         num_samples=args.samples_per_ray,
+                                         num_encodings=args.num_encodings,     
                                          rng=rng_keys[2])
             plt.imshow(predicted_img)
             plt.savefig(fig_dir/ f"{str(i).zfill(10)}.png")
