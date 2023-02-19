@@ -1,6 +1,7 @@
 import typing as t
 import argparse
 from pathlib import Path
+from functools import partial
 
 import jax.random as rd
 import jax.numpy as jnp
@@ -10,6 +11,7 @@ import jax
 import optax
 import matplotlib.pyplot as plt
 from flax.training import train_state
+from tqdm import tqdm
 
 from nerf.ray_helpers import get_ray_bundle, sample_query_points, positional_encoding
 from nerf.model import MLP
@@ -22,12 +24,20 @@ class TrainState(train_state.TrainState):
 def create_train_state(module: flax.linen.Module,
                        lr: float, 
                        pseudo_input: t.Optional[jnp.ndarray],
+                       near_thres: float,
+                       far_thres: float,
+                       num_samples: int,
+                       num_encodings: int,
                        rng: rd.KeyArray) -> TrainState:
     rngs = rd.split(rng, num=3)
     params = module.init(rngs[0], pseudo_input)["params"]
     tx = optax.adam(learning_rate=lr)
     opt_state = tx.init(params)
-    return TrainState(apply_fn=nerf_predict,
+    return TrainState(apply_fn=partial(nerf_predict,
+                                       near_thres=near_thres, 
+                                       far_thres=far_thres, 
+                                       num_samples=num_samples,
+                                       num_encodings=num_encodings),
                       params=params,
                       tx=tx,
                       rngs=rngs[1:],
@@ -40,6 +50,10 @@ def nerf_predict(params: jnp.ndarray,
                  cam2world: jnp.array,
                  focal_length: float,
                  model: flax.linen.Module,
+                 near_thres: float,
+                 far_thres: float,
+                 num_samples: int,
+                 num_encodings: int,
                  batch_size:int,
                  rng: rd.KeyArray) -> jnp.ndarray:
     """Run one iteration of nerf"""
@@ -52,14 +66,14 @@ def nerf_predict(params: jnp.ndarray,
                             
     query_points, depth_values = sample_query_points(origins=ray_origins, 
                                        directions=ray_dirs,
-                                       near_thres=0.1, 
-                                       far_thres=6., 
-                                       num_samples=2, 
+                                       near_thres=near_thres, 
+                                       far_thres=far_thres, 
+                                       num_samples=num_samples, 
                                        rand_key=new_key)
-    enc_points = positional_encoding(query_points.reshape(-1, 3), num_encodings=2)
+    enc_points = positional_encoding(query_points.reshape(-1, 3), num_encodings=num_encodings)
     
     predictions = []
-    for i in range(0, enc_points.shape[0], batch_size):
+    for i in tqdm(range(0, enc_points.shape[0], batch_size), desc="RENDERING"):
         batch = enc_points[i:i+batch_size, :]
         pred = model.apply({"params": params}, batch)
         predictions.append(pred)
@@ -81,13 +95,13 @@ def train_step(state: TrainState,
                batch_size: int):
     "Run one training step"
     def nerf_loss(params) -> float:
-        predicted_img = state.apply_fn(params, 
-                                       image, 
-                                       cam2world,
-                                       focal_length,
-                                       model, 
-                                       batch_size, 
-                                       state.rngs[0])
+        predicted_img = state.apply_fn(params=params, 
+                                       image=image, 
+                                       cam2world=cam2world,
+                                       focal_length=focal_length,
+                                       model=model, 
+                                       batch_size=batch_size, 
+                                       rng=state.rngs[0])
 
         return jnp.sum((image - predicted_img) ** 2) / 2
     grad_fn = jax.grad(nerf_loss)
@@ -108,8 +122,8 @@ def main():
     # NERF
     nerf_group = parser.add_argument_group("nerf")
     nerf_group.add_argument("--near_far_bounds", nargs=2, type=float, default=[1., 9.])
-    nerf_group.add_argument("--encoding_fns", default=3)
-    nerf_group.add_argument("--samples_per_ray", type=int, default=9)
+    nerf_group.add_argument("--num_encodings", default=2)
+    nerf_group.add_argument("--samples_per_ray", type=int, default=2)
     
     # TRAIN
     train_group = parser.add_argument_group("train")
@@ -143,16 +157,20 @@ def main():
     # INIT MODEL
     model = MLP([128, 128], 4)
     h, w = image.shape[:2]
-    pseudo_input = jnp.ones([h, w, 3*2*args.encoding_fns])
+    pseudo_input = jnp.ones([h, w, 3*2*args.num_encodings])
 
-    # Optimizer State
+    # Optimizer State and Model State
     rng_keys = rd.split(rng_key, num=3)
     state = create_train_state(module=model,
                               lr=args.lr, 
                               pseudo_input=pseudo_input,
-                              rng=rng_keys[0])
+                              rng=rng_keys[0],
+                              near_thres=args.near_far_bounds[0],
+                              far_thres=args.near_far_bounds[1],
+                              num_samples=args.samples_per_ray,
+                              num_encodings=args.num_encodings)
 
-    for i in range(args.n_iters):
+    for i in tqdm(range(args.n_iters), desc="TRAINING"):
         target_img_idx = rd.randint(rng_keys[1], (1,) , 0, images.shape[0]).item()
         target_img = images[target_img_idx]
         cam2world = cam2world[target_img_idx]
@@ -164,7 +182,7 @@ def main():
                            model,
                            batch_size=args.batch_size
                           )
-        if i % 100 == 0:
+        if i % 100 == 0 or i == args.n_iters - 1:
             predicted_img = nerf_predict(state.params,
                                          image,
                                          cam2world,
