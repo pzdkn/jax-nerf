@@ -20,7 +20,7 @@ keywords = ["jax", "nerf"]
 
 dependencies = [
     "jax[minimum-jaxlib]",
-    "flax>=0.6.3",
+    "flax==0.6.3",
     "optax>=0.1.4",
     "Pillow>=9.4.0",
     'tomli; python_version < "3.11"',
