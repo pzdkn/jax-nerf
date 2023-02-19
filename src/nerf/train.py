@@ -1,4 +1,5 @@
 import typing as t
+import argparse
 from pathlib import Path
 
 import jax.random as rd
@@ -97,37 +98,61 @@ def train_step(state: TrainState,
 
 
 def main():
-    # DATA
-    DATA_PATH = Path("./data/tiny_nerf_data.npz")
-    SAVE_PATH = Path("./results/figs")
-    SAVE_PATH.mkdir(exist_ok=True, parents=True)
-    # PARAMETERS 
-    NEAR, FAR = 1., 9.
-    ENCODINS_FNS = 2
-    DEPTH_SAMPLES_PER_RAY = 8
-    BATCH_SIZE = 128
-    LR = 1e-3
-    NUM_ITERS = 3000
-    SEED = 42
-    # Random
-    rng_key = rd.PRNGKey(SEED)
-    # Load
-    images, cam2world, focal = load_image_data(DATA_PATH)
+    parser = argparse.ArgumentParser()
+    #FOLDERS
+    data_group = parser.add_argument_group("data")
+    data_group.add_argument("--data_path", type=str, default="./data/tiny_nerf_data.npz")
+    data_group.add_argument("--res_dir", type=str, default="./results")
+    data_group.add_argument("--fig_dir", type=str, default="./results/figs")
+
+    # NERF
+    nerf_group = parser.add_argument_group("nerf")
+    nerf_group.add_argument("--near_far_bounds", nargs=2, type=float, default=[1., 9.])
+    nerf_group.add_argument("--encoding_fns", default=3)
+    nerf_group.add_argument("--samples_per_ray", type=int, default=9)
+    
+    # TRAIN
+    train_group = parser.add_argument_group("train")
+    train_group.add_argument("--batch_size", type=int, default=2)
+    train_group.add_argument("--lr", type=float, default=1e-3)
+    train_group.add_argument("--n_iters", type=int, default=3000)
+
+    # OTHER 
+    other_group = parser.add_argument_group("other")
+    other_group.add_argument("--seed", type=int, default=42)
+
+    args = parser.parse_args()
+
+    # FOLDER OPS
+    data_path = Path(args.data_path)
+    assert data_path.exists(), f"No data found under {data_path.resolve()}"
+
+    res_dir = Path(args.res_dir)
+    fig_dir = Path(args.fig_dir)
+    to_create = [res_dir, fig_dir]
+    for folder in to_create:
+        folder.mkdir(exist_ok=True, parents=True)
+    
+    # SET SEED
+    rng_key = rd.PRNGKey(args.seed)
+    
+    # LOAD IMAGES
+    images, cam2world, focal = load_image_data(data_path)
     image = images[0]
-    plt.imshow(image)
-    plt.show()
-    # Model
+    
+    # INIT MODEL
     model = MLP([128, 128], 4)
     h, w = image.shape[:2]
-    pseudo_input = jnp.ones([h, w, 3*2*ENCODINS_FNS])
+    pseudo_input = jnp.ones([h, w, 3*2*args.encoding_fns])
+
     # Optimizer State
     rng_keys = rd.split(rng_key, num=3)
     state = create_train_state(module=model,
-                              lr=LR, 
+                              lr=args.lr, 
                               pseudo_input=pseudo_input,
                               rng=rng_keys[0])
 
-    for i in range(NUM_ITERS):
+    for i in range(args.n_iters):
         target_img_idx = rd.randint(rng_keys[1], (1,) , 0, images.shape[0]).item()
         target_img = images[target_img_idx]
         cam2world = cam2world[target_img_idx]
@@ -137,7 +162,7 @@ def main():
                            cam2world,
                            focal,
                            model,
-                           batch_size=BATCH_SIZE
+                           batch_size=args.batch_size
                           )
         if i % 100 == 0:
             predicted_img = nerf_predict(state.params,
@@ -145,10 +170,10 @@ def main():
                                          cam2world,
                                          focal,
                                          model,
-                                         batch_size=BATCH_SIZE,
+                                         batch_size=args.batch_size,
                                          rng=rng_keys[2])
             plt.imshow(predicted_img)
-            plt.savefig(SAVE_PATH / f"{str(i).zfill(10)}.png")
+            plt.savefig(fig_dir/ f"{str(i).zfill(10)}.png")
     
 
 if __name__ == "__main__":
