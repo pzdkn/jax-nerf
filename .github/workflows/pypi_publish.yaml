@@ -1,5 +1,7 @@
 name: publish to pypi
 on: push
+  branches:
+        - main
 jobs:
   build-n-publish:
     name: publish to pypi
