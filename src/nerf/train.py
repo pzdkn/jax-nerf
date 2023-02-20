@@ -151,7 +151,7 @@ def main():
     rng_key = rd.PRNGKey(args.seed)
     
     # LOAD IMAGES
-    images, cam2world, focal = load_image_data(data_path)
+    images, cam2worlds, focal = load_image_data(data_path)
     image = images[0]
     
     # INIT MODEL
@@ -173,7 +173,7 @@ def main():
     for i in tqdm(range(args.n_iters), desc="TRAINING"):
         target_img_idx = rd.randint(rng_keys[1], (1,) , 0, images.shape[0]).item()
         target_img = images[target_img_idx]
-        cam2world = cam2world[target_img_idx]
+        cam2world = cam2worlds[target_img_idx]
 
         state = train_step(state, 
                            target_img,
