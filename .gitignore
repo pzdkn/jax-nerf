@@ -6,3 +6,5 @@ data/
 .pytest_cache/
 build/
 dist/
+results/*
+**/*.egg-info
