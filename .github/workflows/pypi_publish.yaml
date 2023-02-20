@@ -1,31 +1,35 @@
 name: publish to pypi
-on: push
-  branches:
-        - main
+
+on: 
+  push:
+    branches: 
+      - master
+
 jobs:
-  build-n-publish:
-    name: publish to pypi
+   build-n-publish:
+    name: build and publish python distributions
     runs-on: ubuntu-latest
     steps:
-      -uses: actions/checkout@master
-      -name: set up python 3.10
+      - uses: actions/checkout@master
+      - name: set up python 3.10
         uses: actions/setup-python@v3
         with:
           python-version: "3.10"
-      -name: install pypa/build
+      - name: install pypa/build
         run: >-
-          python -m 
-          pip install build
+          python -m
+          pip install
+          build
           --user
-      -name: build binary wheel and source tar ball
+      - name: build wheels and tar ball
         run: >-
           python -m 
           build 
           --sdist
           --wheel
           --outdir dist/
-      -name: publish to pypi
+      - name: publish on pypi
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{secrets.PYPI_API_TOKEN}}
+          password: ${{ secrets.PYPI_API_TOKEN }}
           skip_existing: True
