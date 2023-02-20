@@ -8,7 +8,7 @@ include = ["nerf*"]
 
 [project]
 name = "jax-nerf"
-version = "1.0.4"
+version = "1.0.7"
 description = "Jax implementation of neural radiance fields"
 readme = "README.md"
 authors = [{ name = "Pengfei Zhao", email = "p.zhao.9000@gmail.com" }]
