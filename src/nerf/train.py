@@ -45,6 +45,9 @@ def create_train_state(module: flax.linen.Module,
                       step=0
                       )
 
+def get_mini_batches(query_points: jnp.ndarray, batch_size: int):
+    return [query_points[i:i+batch_size] for i in range(0, query_points.shape[0], batch_size)]
+
 def nerf_predict(params: jnp.ndarray,
                  image: jnp.ndarray, 
                  cam2world: jnp.array,
@@ -73,8 +76,7 @@ def nerf_predict(params: jnp.ndarray,
     enc_points = positional_encoding(query_points.reshape(-1, 3), num_encodings=num_encodings)
     
     predictions = []
-    for i in tqdm(range(0, enc_points.shape[0], batch_size), desc="RENDERING"):
-        batch = enc_points[i:i+batch_size, :]
+    for batch in tqdm(get_mini_batches(enc_points, batch_size), desc="RENDERING"):
         pred = model.apply({"params": params}, batch)
         predictions.append(pred)
     predictions = jnp.concatenate(predictions, axis=0)
