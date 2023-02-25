@@ -62,7 +62,7 @@ def positional_encoding(query_points: jnp.array, num_encodings: int) -> jnp.arra
     Returns:
         jnp.array: encoded feature vec (H*W*num_samples, 3*num_encodings)
     """
-    encodings = []
+    encodings = [query_points]
     freq_bands = 2**jnp.linspace(0, num_encodings, num_encodings)
     for freq in freq_bands:
         for fn in [jnp.sin, jnp.cos]:

@@ -121,9 +121,9 @@ def main():
 
     # NERF
     nerf_group = parser.add_argument_group("nerf")
-    nerf_group.add_argument("--near_far_bounds", nargs=2, type=float, default=[1., 9.])
-    nerf_group.add_argument("--num_encodings", default=2)
-    nerf_group.add_argument("--samples_per_ray", type=int, default=2)
+    nerf_group.add_argument("--near_far_bounds", nargs=2, type=float, default=[2., 6.])
+    nerf_group.add_argument("--num_encodings", default=6, type=int)
+    nerf_group.add_argument("--samples_per_ray", type=int, default=32)
     
     # TRAIN
     train_group = parser.add_argument_group("train")
@@ -157,7 +157,7 @@ def main():
     # INIT MODEL
     model = MLP([128, 128], 4)
     h, w = image.shape[:2]
-    pseudo_input = jnp.ones([h, w, 3*2*args.num_encodings])
+    pseudo_input = jnp.ones([h, w, 3*2*args.num_encodings  + 3])
 
     # Optimizer State and Model State
     rng_keys = rd.split(rng_key, num=3)
