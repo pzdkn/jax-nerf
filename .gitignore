@@ -8,3 +8,6 @@ build/
 dist/
 results/*
 **/*.egg-info
+
+
+notebooks/
