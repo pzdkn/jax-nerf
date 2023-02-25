@@ -12,6 +12,7 @@ import optax
 import matplotlib.pyplot as plt
 from flax.training import train_state
 from tqdm import tqdm
+from squirrel.iterstream import IterableSource
 
 from nerf.ray_helpers import get_ray_bundle, sample_query_points, positional_encoding
 from nerf.model import MLP
@@ -74,9 +75,10 @@ def nerf_predict(params: jnp.ndarray,
                                        num_samples=num_samples, 
                                        rand_key=new_key)
     enc_points = positional_encoding(query_points.reshape(-1, 3), num_encodings=num_encodings)
+    enc_it = IterableSource(enc_points).batched(batch_size)
     
     predictions = []
-    for batch in tqdm(get_mini_batches(enc_points, batch_size), desc="RENDERING"):
+    for batch in tqdm(enc_it, desc="RENDERING"):
         pred = model.apply({"params": params}, batch)
         predictions.append(pred)
     predictions = jnp.concatenate(predictions, axis=0)
